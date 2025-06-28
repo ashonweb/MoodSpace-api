@@ -445,64 +445,160 @@ app.get('/moods', async (req, res) => {
  *   moodId, adventureTitle, locationAndDirection, city, state, updatedAt
  * }
  */
-app.post('/adventures', async (req, res) => {
+/**
+ * PUT /adventures/:moodId/:adventureTitle
+ * Update an existing adventure's locationAndDirection
+ */
+app.put('/adventures/:moodId/:adventureTitle', async (req, res) => {
   try {
-    const { moodId, adventureTitle, locationAndDirection, city, state, updatedAt } = req.body;
+    const { moodId, adventureTitle } = req.params;
+    const { locationAndDirection } = req.body;
 
-    if (!moodId || !adventureTitle || !locationAndDirection) {
+    if (!locationAndDirection) {
       return res.status(400).json({
         success: false,
-        error: 'Missing required fields: moodId, adventureTitle, locationAndDirection'
+        error: 'locationAndDirection is required'
       });
     }
 
-    // Find the single adventures document or create if it doesn't exist
-    let doc = await Adventure.findOne();
+    // Find the document
+    const doc = await Adventure.findOne();
     if (!doc) {
-      doc = new Adventure({ adventures: {} });
+      return res.status(404).json({
+        success: false,
+        error: 'No adventures document found'
+      });
+    }
+
+    // Check if mood exists
+    if (!doc.adventures[moodId]) {
+      return res.status(404).json({
+        success: false,
+        error: `Mood '${moodId}' not found`
+      });
+    }
+
+    // Find the adventure to update
+    const adventureIndex = doc.adventures[moodId].findIndex(
+      adventure => adventure.adventureTitle === adventureTitle
+    );
+
+    if (adventureIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        error: `Adventure '${adventureTitle}' not found in mood '${moodId}'`
+      });
     }
 
     // Get current adventures object
-    const currentAdventures = doc.adventures || {};
+    const currentAdventures = doc.adventures;
     
-    // Add new adventure under the correct mood
-    if (!currentAdventures[moodId]) {
-      currentAdventures[moodId] = [];
-    }
-
-    const newAdventure = {
-      adventureTitle,
-      locationAndDirection,
-      city,
-      state,
-      updatedAt: updatedAt || new Date().toISOString()
-    };
-
-    currentAdventures[moodId].push(newAdventure);
+    // Update only the locationAndDirection field
+    currentAdventures[moodId][adventureIndex].locationAndDirection = locationAndDirection;
+    currentAdventures[moodId][adventureIndex].updatedAt = new Date().toISOString();
 
     // Use set() to ensure Mongoose detects the change
     doc.set('adventures', currentAdventures);
-    
     await doc.save();
 
-    console.log('✅ Adventure saved:', newAdventure);
-    console.log('📊 Current adventures structure:', JSON.stringify(currentAdventures, null, 2));
+    const updatedAdventure = currentAdventures[moodId][adventureIndex];
 
-    res.status(201).json({
+    console.log('✅ Adventure updated:', updatedAdventure.adventureTitle);
+    console.log('📍 New locationAndDirection count:', locationAndDirection.length);
+
+    res.json({
       success: true,
-      message: 'Adventure saved successfully',
-      data: newAdventure
+      message: 'Adventure updated successfully',
+      data: updatedAdventure
     });
+
   } catch (err) {
-    console.error('❌ Error saving adventure:', err);
+    console.error('❌ Error updating adventure:', err);
     res.status(500).json({
       success: false,
-      error: 'Failed to save adventure',
+      error: 'Failed to update adventure',
       message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
     });
   }
 });
 
+/**
+ * Alternative: PUT /adventures/update
+ * Update adventure by sending moodId and adventureTitle in body
+ */
+app.put('/adventures/update', async (req, res) => {
+  try {
+    const { moodId, adventureTitle, locationAndDirection,location } = req.body;
+
+    if (!moodId || !adventureTitle || !locationAndDirection) {
+      return res.status(400).json({
+        success: false,
+        error: 'moodId, adventureTitle, and locationAndDirection are required'
+      });
+    }
+
+    // Find the document
+    const doc = await Adventure.findOne();
+    if (!doc) {
+      return res.status(404).json({
+        success: false,
+        error: 'No adventures document found'
+      });
+    }
+
+    // Check if mood exists
+    if (!doc.adventures[moodId]) {
+      return res.status(404).json({
+        success: false,
+        error: `Mood '${moodId}' not found`
+      });
+    }
+
+    // Find the adventure to update
+    const adventureIndex = doc.adventures[moodId].findIndex(
+      adventure => adventure.adventureTitle === adventureTitle
+    );
+
+    if (adventureIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        error: `Adventure '${adventureTitle}' not found in mood '${moodId}'`
+      });
+    }
+
+    // Get current adventures object
+    const currentAdventures = doc.adventures;
+    
+    // Update only the locationAndDirection field
+    currentAdventures[moodId][adventureIndex].location = location;
+
+    currentAdventures[moodId][adventureIndex].locationAndDirection = locationAndDirection;
+    currentAdventures[moodId][adventureIndex].updatedAt = new Date().toISOString();
+
+    // Use set() to ensure Mongoose detects the change
+    doc.set('adventures', currentAdventures);
+    await doc.save();
+
+    const updatedAdventure = currentAdventures[moodId][adventureIndex];
+
+    console.log('✅ Adventure updated:', updatedAdventure.adventureTitle);
+    console.log('📍 New locationAndDirection count:', locationAndDirection.length);
+
+    res.json({
+      success: true,
+      message: 'Adventure updated successfully',
+      data: updatedAdventure
+    });
+
+  } catch (err) {
+    console.error('❌ Error updating adventure:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update adventure',
+      message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+    });
+  }
+});
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
