@@ -530,10 +530,10 @@ app.put('/adventures/update', async (req, res) => {
   try {
     const { moodId, title, locationAndDirection,location } = req.body;
 
-    if (!moodId || !title || !locationAndDirection) {
+    if (!moodId || !title || !locationAndDirection || !location) {
       return res.status(400).json({
         success: false,
-        error: 'moodId, adventureTitle, and locationAndDirection are required'
+        error: 'moodId, adventureTitle, and locationAndDirection,loca are required'
       });
     }
 
