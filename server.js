@@ -435,6 +435,68 @@ app.get('/moods', async (req, res) => {
   }
 });
 
+
+
+
+/**
+ * POST /adventures
+ * Save a new adventure entry to the database.
+ * Expects: {
+ *   moodId, adventureTitle, locationAndDirection, city, state, updatedAt
+ * }
+ */
+app.post('/adventures', async (req, res) => {
+  try {
+    const { moodId, adventureTitle, locationAndDirection, city, state, updatedAt } = req.body;
+
+    if (!moodId || !adventureTitle || !locationAndDirection) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: moodId, adventureTitle, locationAndDirection'
+      });
+    }
+
+    // Find the single adventures document
+    const doc = await Adventure.findOne();
+    if (!doc) {
+      return res.status(404).json({
+        success: false,
+        error: 'No adventures document found to update'
+      });
+    }
+
+    // Add new adventure under the correct mood
+    if (!doc.adventures[moodId]) {
+      doc.adventures[moodId] = [];
+    }
+    doc.adventures[moodId].push({
+      adventureTitle,
+      locationAndDirection,
+      city,
+      state,
+      updatedAt: updatedAt || new Date().toISOString()
+    });
+
+    await doc.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Adventure saved successfully',
+      data: doc.adventures[moodId][doc.adventures[moodId].length - 1]
+    });
+  } catch (err) {
+    console.error('❌ Error saving adventure:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to save adventure',
+      message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+    });
+  }
+});
+
+
+
+
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
