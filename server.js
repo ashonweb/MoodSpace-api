@@ -577,23 +577,17 @@ app.put('/adventures/update', async (req, res) => {
       });
     }
 
-    // Get current adventures object
-    const currentAdventures = doc.adventures;
-    
-    // Update the fields
-    currentAdventures[moodId][adventureIndex].locationAndDirection = locationAndDirection;
-    currentAdventures[moodId][adventureIndex].updatedAt = new Date().toISOString();
-    
-    // Update location if provided
+    // Use markModified to ensure Mongoose tracks changes in deeply nested structures
+    doc.adventures[moodId][adventureIndex].locationAndDirection = locationAndDirection;
+    doc.adventures[moodId][adventureIndex].updatedAt = new Date().toISOString();
     if (location) {
-      currentAdventures[moodId][adventureIndex].location = location;
+      doc.adventures[moodId][adventureIndex].location = location;
     }
 
-    // Use set() to ensure Mongoose detects the change
-    doc.set('adventures', currentAdventures);
+    doc.markModified(`adventures.${moodId}.${adventureIndex}`);
     await doc.save();
 
-    const updatedAdventure = currentAdventures[moodId][adventureIndex];
+    const updatedAdventure = doc.adventures[moodId][adventureIndex];
 
     console.log('✅ Adventure updated:', updatedAdventure.title);
     console.log('📍 New locationAndDirection count:', locationAndDirection.length);
