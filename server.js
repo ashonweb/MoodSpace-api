@@ -678,15 +678,10 @@ app.get('/locationAndDirection', async (req, res) => {
 
 
 
-/**
- * PUT /adventures/locationAndDirection
- * Updates the locationAndDirection array for a specific adventure.
- * Expects body: { moodId, title, state, location, locationAndDirection }
- */
 app.post('/locationAndDirection', async (req, res) => {
   try {
     const { moodId, title, city, state, location, locationAndDirection } = req.body;
-
+    
     // Validate required fields
     if (!moodId || !title || !city || !state || !location || !locationAndDirection) {
       return res.status(400).json({
@@ -702,62 +697,117 @@ app.post('/locationAndDirection', async (req, res) => {
       });
     }
 
-    // Find the document
-    const doc = await Adventure.findOne();
+    // Find the document or create one if it doesn't exist
+    let doc = await Adventure.findOne();
     if (!doc) {
-      return res.status(404).json({
-        success: false,
-        error: 'No adventures document found'
-      });
+      console.log('📝 Creating new adventures document');
+      doc = new Adventure({ adventures: {} });
     }
 
-    // Check if mood exists
+    // Initialize mood array if it doesn't exist
+    if (!doc.adventures[moodId]) {
+      console.log(`📝 Creating new mood: ${moodId}`);
+      doc.adventures[moodId] = [];
+    }
+
     const moodAdventures = doc.adventures[moodId];
-    if (!moodAdventures) {
-      return res.status(404).json({
-        success: false,
-        error: `Mood '${moodId}' not found`
+
+    console.log(`🔍 Searching for adventure in mood '${moodId}':`);
+    console.log(`  - Title: '${title}'`);
+    console.log(`  - City: '${city}'`);
+    console.log(`  - State: '${state}'`);
+    console.log(`  - Total adventures in mood: ${moodAdventures.length}`);
+
+    // Try to find existing adventure with flexible matching
+    let adventureIndex = -1;
+    let matchDetails = {};
+
+    // Try exact match first
+    adventureIndex = moodAdventures.findIndex(adv => {
+      const titleMatch = (adv.title === title || adv.adventureTitle === title);
+      const locationMatch = adv.location === city;
+      const stateMatch = adv.state === state;
+      
+      if (titleMatch && locationMatch && stateMatch) {
+        matchDetails = { type: 'exact', titleField: adv.title ? 'title' : 'adventureTitle' };
+        return true;
+      }
+      return false;
+    });
+
+    // If no exact match, try case-insensitive search
+    if (adventureIndex === -1) {
+      adventureIndex = moodAdventures.findIndex(adv => {
+        const titleMatch = (
+          (adv.title && adv.title.toLowerCase() === title.toLowerCase()) ||
+          (adv.adventureTitle && adv.adventureTitle.toLowerCase() === title.toLowerCase())
+        );
+        const locationMatch = adv.location && adv.location.toLowerCase() === city.toLowerCase();
+        const stateMatch = adv.state && adv.state.toLowerCase() === state.toLowerCase();
+        
+        if (titleMatch && locationMatch && stateMatch) {
+          matchDetails = { type: 'case-insensitive', titleField: adv.title ? 'title' : 'adventureTitle' };
+          return true;
+        }
+        return false;
       });
     }
 
-    // Find the adventure by title, city, and state
-    const adventureIndex = moodAdventures.findIndex(
-      adv =>
-        (adv.title === title || adv.adventureTitle === title) &&
-        adv.location === city &&
-        adv.state === state
-    );
+    let isNewAdventure = false;
 
     if (adventureIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        error: `Adventure not found for title '${title}', city '${city}', state '${state}' in mood '${moodId}'`
-      });
+      // Adventure doesn't exist, create a new one
+      console.log('📝 Adventure not found, creating new adventure');
+      
+      const newAdventure = {
+        title: title,
+        location: location,
+        city: city,
+        state: state,
+        locationAndDirection: locationAndDirection,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      // Add the new adventure to the mood array
+      moodAdventures.push(newAdventure);
+      adventureIndex = moodAdventures.length - 1;
+      isNewAdventure = true;
+      
+      console.log(`✅ Created new adventure at index ${adventureIndex}`);
+    } else {
+      // Adventure exists, update it
+      console.log(`✅ Found existing adventure at index ${adventureIndex} using ${matchDetails.type} match`);
+      
+      // Update locationAndDirection and updatedAt
+      moodAdventures[adventureIndex].locationAndDirection = locationAndDirection;
+      moodAdventures[adventureIndex].updatedAt = new Date().toISOString();
+      moodAdventures[adventureIndex].location = location;
     }
 
-    // Update locationAndDirection and updatedAt
-    moodAdventures[adventureIndex].locationAndDirection = locationAndDirection;
-    moodAdventures[adventureIndex].updatedAt = new Date().toISOString();
-    moodAdventures[adventureIndex].location = location;
-
-    doc.markModified(`adventures.${moodId}.${adventureIndex}`);
+    // Mark the document as modified and save
+    doc.markModified(`adventures.${moodId}`);
     await doc.save();
+
+    console.log(`✅ Adventure ${isNewAdventure ? 'created' : 'updated'} successfully`);
 
     res.json({
       success: true,
-      message: 'locationAndDirection updated successfully',
+      message: `Adventure ${isNewAdventure ? 'created' : 'updated'} successfully`,
+      isNewAdventure: isNewAdventure,
+      matchType: isNewAdventure ? 'new' : matchDetails.type,
       data: moodAdventures[adventureIndex]
     });
+
   } catch (err) {
-    console.error('❌ Error updating locationAndDirection:', err);
+    console.error('❌ Error saving/updating adventure:', err);
     res.status(500).json({
       success: false,
-      error: 'Failed to update locationAndDirection',
+      error: 'Failed to save/update adventure',
       message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
     });
   }
 });
-
 
 // 404 handler
 app.use('*', (req, res) => {
