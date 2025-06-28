@@ -528,9 +528,9 @@ app.put('/adventures/:moodId/:adventureTitle', async (req, res) => {
  */
 app.put('/adventures/update', async (req, res) => {
   try {
-    const { moodId, adventureTitle, locationAndDirection,location } = req.body;
+    const { moodId, title, locationAndDirection,location } = req.body;
 
-    if (!moodId || !adventureTitle || !locationAndDirection) {
+    if (!moodId || !title || !locationAndDirection) {
       return res.status(400).json({
         success: false,
         error: 'moodId, adventureTitle, and locationAndDirection are required'
@@ -556,13 +556,13 @@ app.put('/adventures/update', async (req, res) => {
 
     // Find the adventure to update
     const adventureIndex = doc.adventures[moodId].findIndex(
-      adventure => adventure.adventureTitle === adventureTitle
+      adventure => adventure.title === title
     );
 
     if (adventureIndex === -1) {
       return res.status(404).json({
         success: false,
-        error: `Adventure '${adventureTitle}' not found in mood '${moodId}'`
+        error: `Adventure '${title}' not found in mood '${moodId}'`
       });
     }
 
@@ -581,7 +581,7 @@ app.put('/adventures/update', async (req, res) => {
 
     const updatedAdventure = currentAdventures[moodId][adventureIndex];
 
-    console.log('✅ Adventure updated:', updatedAdventure.adventureTitle);
+    console.log('✅ Adventure updated:', updatedAdventure.title);
     console.log('📍 New locationAndDirection count:', locationAndDirection.length);
 
     res.json({
