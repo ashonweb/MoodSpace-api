@@ -609,6 +609,155 @@ app.put('/adventures/update', async (req, res) => {
 });
 
 
+
+/**
+ * GET /adventures/locationAndDirection
+ * Query params: moodId, title, city, state
+ * Returns the locationAndDirection array for the specified adventure
+ */
+app.get('/adventures/locationAndDirection', async (req, res) => {
+  try {
+    const { moodId, title, city, state } = req.query;
+
+    if (!moodId || !title || !city || !state) {
+      return res.status(400).json({
+        success: false,
+        error: 'moodId, title, city, and state are required query parameters'
+      });
+    }
+
+    // Find the document
+    const doc = await Adventure.findOne();
+    if (!doc) {
+      return res.status(404).json({
+        success: false,
+        error: 'No adventures document found'
+      });
+    }
+
+    // Check if mood exists
+    const moodAdventures = doc.adventures[moodId];
+    if (!moodAdventures) {
+      return res.status(404).json({
+        success: false,
+        error: `Mood '${moodId}' not found`
+      });
+    }
+
+    // Find the adventure by title, city, and state
+    const adventure = moodAdventures.find(
+      adv =>
+        (adv.title === title || adv.adventureTitle === title) &&
+        adv.city === city &&
+        adv.state === state
+    );
+
+    if (!adventure) {
+      return res.status(404).json({
+        success: false,
+        error: `Adventure not found for title '${title}', city '${city}', state '${state}' in mood '${moodId}'`
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        locationAndDirection: adventure.locationAndDirection || [],
+        updatedAt: adventure.updatedAt || null
+      }
+    });
+  } catch (err) {
+    console.error('❌ Error fetching locationAndDirection:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch locationAndDirection',
+      message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+    });
+  }
+});
+
+
+
+/**
+ * PUT /adventures/locationAndDirection
+ * Updates the locationAndDirection array for a specific adventure.
+ * Expects body: { moodId, title, state, location, locationAndDirection }
+ */
+app.put('/adventures/locationAndDirection', async (req, res) => {
+  try {
+    const { moodId, title, state, location, locationAndDirection } = req.body;
+
+    // Validate required fields
+    if (!moodId || !title || !state || !location || !locationAndDirection) {
+      return res.status(400).json({
+        success: false,
+        error: 'moodId, title, state, location, and locationAndDirection are required'
+      });
+    }
+
+    if (!Array.isArray(locationAndDirection)) {
+      return res.status(400).json({
+        success: false,
+        error: 'locationAndDirection must be an array'
+      });
+    }
+
+    // Find the document
+    const doc = await Adventure.findOne();
+    if (!doc) {
+      return res.status(404).json({
+        success: false,
+        error: 'No adventures document found'
+      });
+    }
+
+    // Check if mood exists
+    const moodAdventures = doc.adventures[moodId];
+    if (!moodAdventures) {
+      return res.status(404).json({
+        success: false,
+        error: `Mood '${moodId}' not found`
+      });
+    }
+
+    // Find the adventure by title, city (location), and state
+    const adventureIndex = moodAdventures.findIndex(
+      adv =>
+        (adv.title === title || adv.adventureTitle === title) &&
+        (adv.city === location || adv.location === location) &&
+        adv.state === state
+    );
+
+    if (adventureIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        error: `Adventure not found for title '${title}', location '${location}', state '${state}' in mood '${moodId}'`
+      });
+    }
+
+    // Update locationAndDirection and updatedAt
+    moodAdventures[adventureIndex].locationAndDirection = locationAndDirection;
+    moodAdventures[adventureIndex].updatedAt = new Date().toISOString();
+
+    doc.markModified(`adventures.${moodId}.${adventureIndex}`);
+    await doc.save();
+
+    res.json({
+      success: true,
+      message: 'locationAndDirection updated successfully',
+      data: moodAdventures[adventureIndex]
+    });
+  } catch (err) {
+    console.error('❌ Error updating locationAndDirection:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update locationAndDirection',
+      message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+    });
+  }
+});
+
+
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
