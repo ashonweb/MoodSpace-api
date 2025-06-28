@@ -685,13 +685,13 @@ app.get('/locationAndDirection', async (req, res) => {
  */
 app.post('/locationAndDirection', async (req, res) => {
   try {
-    const { moodId, title, state, location, locationAndDirection } = req.body;
+    const { moodId, title, city, state, location, locationAndDirection } = req.body;
 
     // Validate required fields
-    if (!moodId || !title || !state || !location || !locationAndDirection) {
+    if (!moodId || !title || !city || !state || !location || !locationAndDirection) {
       return res.status(400).json({
         success: false,
-        error: 'moodId, title, state, location, and locationAndDirection are required'
+        error: 'moodId, title, city, state, location, and locationAndDirection are required'
       });
     }
 
@@ -720,24 +720,25 @@ app.post('/locationAndDirection', async (req, res) => {
       });
     }
 
-    // Find the adventure by title, city (location), and state
+    // Find the adventure by title, city, and state
     const adventureIndex = moodAdventures.findIndex(
       adv =>
-        (adv.title === title) &&
-        
+        (adv.title === title || adv.adventureTitle === title) &&
+        adv.location === city &&
         adv.state === state
     );
 
     if (adventureIndex === -1) {
       return res.status(404).json({
         success: false,
-        error: `Adventure not found for title '${title}', location '${location}', state '${state}' in mood '${moodId}'`
+        error: `Adventure not found for title '${title}', city '${city}', state '${state}' in mood '${moodId}'`
       });
     }
 
     // Update locationAndDirection and updatedAt
     moodAdventures[adventureIndex].locationAndDirection = locationAndDirection;
     moodAdventures[adventureIndex].updatedAt = new Date().toISOString();
+    moodAdventures[adventureIndex].location = location;
 
     doc.markModified(`adventures.${moodId}.${adventureIndex}`);
     await doc.save();
