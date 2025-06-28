@@ -644,12 +644,13 @@ app.get('/locationAndDirection', async (req, res) => {
       });
     }
 
-    // Find the adventure by title, city, and state
+    // Find the adventure by title, city, and state (case-insensitive)
     const adventure = moodAdventures.find(
       adv =>
-        (adv.title === title || adv.adventureTitle === title) &&
-        adv.city === city &&
-        adv.state === state
+        ((adv.title && adv.title.toLowerCase() === title.toLowerCase()) ||
+         (adv.adventureTitle && adv.adventureTitle.toLowerCase() === title.toLowerCase())) &&
+        adv.city && adv.city.toLowerCase() === city.toLowerCase() &&
+        adv.state && adv.state.toLowerCase() === state.toLowerCase()
     );
 
     if (!adventure) {
@@ -661,10 +662,7 @@ app.get('/locationAndDirection', async (req, res) => {
 
     res.json({
       success: true,
-      data: {
-        locationAndDirection: adventure.locationAndDirection || [],
-        updatedAt: adventure.updatedAt || null
-      }
+      data: adventure
     });
   } catch (err) {
     console.error('❌ Error fetching locationAndDirection:', err);
