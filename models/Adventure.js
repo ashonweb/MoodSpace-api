@@ -1,12 +1,11 @@
 const mongoose = require('mongoose');
 
 const adventureItemSchema = new mongoose.Schema({
-  adventureTitle: { type: String, required: true },
+  moodId: { type: String, required: true },
+  title: { type: String, required: true },
   locationAndDirection: { type: String, required: true },
-  city: String,
-  state: String,
-  updatedAt: { type: String, default: () => new Date().toISOString() }
-}, { _id: false });
+  location: String,
+});
 
 const adventureSchema = new mongoose.Schema({
   adventures: {
