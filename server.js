@@ -683,7 +683,7 @@ app.get('/locationAndDirection', async (req, res) => {
  * Updates the locationAndDirection array for a specific adventure.
  * Expects body: { moodId, title, state, location, locationAndDirection }
  */
-app.put('/locationAndDirection', async (req, res) => {
+app.post('/locationAndDirection', async (req, res) => {
   try {
     const { moodId, title, state, location, locationAndDirection } = req.body;
 
