@@ -1,11 +1,27 @@
 const mongoose = require('mongoose');
 
+
+// Schema for individual location items within locationAndDirection
+const locationItemSchema = new mongoose.Schema({
+  address: String,
+  gettingThere: String,
+  parking: String,
+  category: String,
+  searchTerm: String,
+  coordinates: {
+    lat: Number,
+    lng: Number
+  }
+}, { _id: false });
+
+// Schema for individual adventure items
 const adventureItemSchema = new mongoose.Schema({
-  moodId: { type: String, required: true },
-  title: { type: String, required: true },
-  locationAndDirection: { type: String, required: true },
-  location: String,
-});
+  title: { type: String, required: true }, // Changed from adventureTitle to title
+  locationAndDirection: [locationItemSchema], // Array of location objects
+  city: String,
+  state: String,
+  updatedAt: { type: String, default: () => new Date().toISOString() }
+}, { _id: false });
 
 const adventureSchema = new mongoose.Schema({
   adventures: {

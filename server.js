@@ -526,14 +526,25 @@ app.put('/adventures/:moodId/:adventureTitle', async (req, res) => {
  * Alternative: PUT /adventures/update
  * Update adventure by sending moodId and adventureTitle in body
  */
+
+
 app.put('/adventures/update', async (req, res) => {
   try {
-    const { moodId, title, locationAndDirection,location } = req.body;
+    const { moodId, title, locationAndDirection, location } = req.body;
 
-    if (!moodId || !title || !locationAndDirection || !location) {
+    // Validation
+    if (!moodId || !title || !locationAndDirection) {
       return res.status(400).json({
         success: false,
-        error: 'moodId, adventureTitle, and locationAndDirection,loca are required'
+        error: 'moodId, title, and locationAndDirection are required'
+      });
+    }
+
+    // Validate locationAndDirection is an array
+    if (!Array.isArray(locationAndDirection)) {
+      return res.status(400).json({
+        success: false,
+        error: 'locationAndDirection must be an array'
       });
     }
 
@@ -569,11 +580,14 @@ app.put('/adventures/update', async (req, res) => {
     // Get current adventures object
     const currentAdventures = doc.adventures;
     
-    // Update only the locationAndDirection field
-    currentAdventures[moodId][adventureIndex].location = location;
-
+    // Update the fields
     currentAdventures[moodId][adventureIndex].locationAndDirection = locationAndDirection;
     currentAdventures[moodId][adventureIndex].updatedAt = new Date().toISOString();
+    
+    // Update location if provided
+    if (location) {
+      currentAdventures[moodId][adventureIndex].location = location;
+    }
 
     // Use set() to ensure Mongoose detects the change
     doc.set('adventures', currentAdventures);
@@ -599,6 +613,8 @@ app.put('/adventures/update', async (req, res) => {
     });
   }
 });
+
+
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
