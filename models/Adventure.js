@@ -1,16 +1,23 @@
-// models/Adventure.js
 const mongoose = require('mongoose');
+
+const adventureItemSchema = new mongoose.Schema({
+  adventureTitle: { type: String, required: true },
+  locationAndDirection: { type: String, required: true },
+  city: String,
+  state: String,
+  updatedAt: { type: String, default: () => new Date().toISOString() }
+}, { _id: false });
 
 const adventureSchema = new mongoose.Schema({
   adventures: {
-    type: mongoose.Schema.Types.Mixed, // Allow any type of data
-    default: {}
+    type: Map,
+    of: [adventureItemSchema],
+    default: new Map()
   }
 }, {
-  collection: 'adventures', // Explicit collection name
-  strict: false, // Allow flexible schema
-  versionKey: false // Remove __v field
+  collection: 'adventures',
+  versionKey: false,
+  minimize: false // Ensure empty objects are saved
 });
 
-// Export with explicit collection name
 module.exports = mongoose.model('Adventure', adventureSchema, 'adventures');

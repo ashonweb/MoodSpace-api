@@ -456,34 +456,34 @@ app.post('/adventures', async (req, res) => {
       });
     }
 
-    // Find the single adventures document
-    const doc = await Adventure.findOne();
-    if (!doc) {
-      return res.status(404).json({
-        success: false,
-        error: 'No adventures document found to update'
-      });
-    }
-
-    // Add new adventure under the correct mood
-    if (!doc.adventures[moodId]) {
-      doc.adventures[moodId] = [];
-    }
-    doc.adventures[moodId].push({
+    const newAdventure = {
       adventureTitle,
       locationAndDirection,
       city,
       state,
       updatedAt: updatedAt || new Date().toISOString()
-    });
+    };
 
-    doc.markModified('adventures');
-    await doc.save();
+    // Use findOneAndUpdate with $push to add the adventure
+    const doc = await Adventure.findOneAndUpdate(
+      {}, // Find any document (since you have only one)
+      { 
+        $push: { [`adventures.${moodId}`]: newAdventure }
+      },
+      { 
+        new: true, 
+        upsert: true, // Create document if it doesn't exist
+        setDefaultsOnInsert: true 
+      }
+    );
+
+    console.log('✅ Adventure saved:', newAdventure);
+    console.log('📊 Updated document:', JSON.stringify(doc.adventures, null, 2));
 
     res.status(201).json({
       success: true,
       message: 'Adventure saved successfully',
-      data: doc.adventures[moodId][doc.adventures[moodId].length - 1]
+      data: newAdventure
     });
   } catch (err) {
     console.error('❌ Error saving adventure:', err);
@@ -494,8 +494,6 @@ app.post('/adventures', async (req, res) => {
     });
   }
 });
-
-
 
 
 // 404 handler
