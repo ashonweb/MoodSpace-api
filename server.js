@@ -615,7 +615,7 @@ app.put('/adventures/update', async (req, res) => {
  * Query params: moodId, title, city, state
  * Returns the locationAndDirection array for the specified adventure
  */
-app.get('/adventures/locationAndDirection', async (req, res) => {
+app.get('/locationAndDirection', async (req, res) => {
   try {
     const { moodId, title, city, state } = req.query;
 
@@ -683,7 +683,7 @@ app.get('/adventures/locationAndDirection', async (req, res) => {
  * Updates the locationAndDirection array for a specific adventure.
  * Expects body: { moodId, title, state, location, locationAndDirection }
  */
-app.put('/adventures/locationAndDirection', async (req, res) => {
+app.put('/locationAndDirection', async (req, res) => {
   try {
     const { moodId, title, state, location, locationAndDirection } = req.body;
 
