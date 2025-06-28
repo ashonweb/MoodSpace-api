@@ -247,6 +247,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
+const LocationAndDirection = require('./models/locationAndDirection'); // Adjust path as needed
 
 const app = express();
 
@@ -615,76 +616,319 @@ app.put('/adventures/update', async (req, res) => {
  * Query params: moodId, title, city, state
  * Returns the locationAndDirection array for the specified adventure
  */
-app.get('/locationAndDirection', async (req, res) => {
-  try {
-    const { moodId, title, city, state } = req.query;
+// app.get('/locationAndDirection', async (req, res) => {
+//   try {
+//     const { moodId, title, city, state } = req.query;
 
-    if (!moodId || !title || !city || !state) {
-      return res.status(400).json({
-        success: false,
-        error: 'moodId, title, city, and state are required query parameters'
-      });
-    }
+//     // Find the document
+//     const doc = await Adventure.findOne();
+//     if (!doc) {
+//       return res.status(404).json({
+//         success: false,
+//         error: 'No adventures document found'
+//       });
+//     }
 
-    // Find the document
-    const doc = await Adventure.findOne();
-    if (!doc) {
-      return res.status(404).json({
-        success: false,
-        error: 'No adventures document found'
-      });
-    }
+//     // If no query parameters provided, return everything
+//     if (!moodId && !title && !city && !state) {
+//       console.log('📋 Returning all adventures');
+      
+//       // Count total adventures across all moods
+//       let totalCount = 0;
+//       const moodSummary = {};
+      
+//       Object.keys(doc.adventures).forEach(mood => {
+//         const count = doc.adventures[mood].length;
+//         moodSummary[mood] = count;
+//         totalCount += count;
+//       });
 
-    // Check if mood exists
-    const moodAdventures = doc.adventures[moodId];
-    if (!moodAdventures) {
-      return res.status(404).json({
-        success: false,
-        error: `Mood '${moodId}' not found`
-      });
-    }
+//       return res.json({
+//         success: true,
+//         message: 'All adventures retrieved successfully',
+//         totalAdventures: totalCount,
+//         moodSummary: moodSummary,
+//         data: doc.adventures
+//       });
+//     }
 
-    // Find the adventure by title, city, and state (case-insensitive)
-    const adventure = moodAdventures.find(
-      adv =>
-        ((adv.title && adv.title.toLowerCase() === title.toLowerCase()) ||
-         (adv.adventureTitle && adv.adventureTitle.toLowerCase() === title.toLowerCase())) &&
-        adv.city && adv.city.toLowerCase() === city.toLowerCase() &&
-        adv.state && adv.state.toLowerCase() === state.toLowerCase()
-    );
+//     // If any query parameter is missing when trying to get specific adventure
+//     if (!moodId || !title || !city || !state) {
+//       return res.status(400).json({
+//         success: false,
+//         error: 'For specific adventure lookup, all query parameters are required: moodId, title, city, and state',
+//         provided: { moodId, title, city, state },
+//         missing: [
+//           !moodId && 'moodId',
+//           !title && 'title', 
+//           !city && 'city',
+//           !state && 'state'
+//         ].filter(Boolean)
+//       });
+//     }
 
-    if (!adventure) {
-      return res.status(404).json({
-        success: false,
-        error: `Adventure not found for title '${title}', city '${city}', state '${state}' in mood '${moodId}'`
-      });
-    }
+//     console.log(`🔍 Looking for specific adventure:`);
+//     console.log(`  - Mood: '${moodId}'`);
+//     console.log(`  - Title: '${title}'`);
+//     console.log(`  - City: '${city}'`);
+//     console.log(`  - State: '${state}'`);
 
-    res.json({
-      success: true,
-      data: adventure
-    });
-  } catch (err) {
-    console.error('❌ Error fetching locationAndDirection:', err);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch locationAndDirection',
-      message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
-    });
-  }
-});
+//     // Check if mood exists
+//     const moodAdventures = doc.adventures[moodId];
+//     if (!moodAdventures) {
+//       return res.status(404).json({
+//         success: false,
+//         error: `Mood '${moodId}' not found`,
+//         availableMoods: Object.keys(doc.adventures)
+//       });
+//     }
+
+//     console.log(`📊 Found ${moodAdventures.length} adventures in mood '${moodId}'`);
+
+//     // Find the adventure with flexible matching
+//     let adventure = null;
+//     let matchType = null;
+
+//     // Try exact match first
+//     adventure = moodAdventures.find(adv => {
+//       const titleMatch = (adv.title === title || adv.adventureTitle === title);
+//       const cityMatch = adv.city === city;
+//       const stateMatch = adv.state === state;
+      
+//       if (titleMatch && cityMatch && stateMatch) {
+//         matchType = 'exact';
+//         return true;
+//       }
+//       return false;
+//     });
+
+//     // Try case-insensitive match
+//     if (!adventure) {
+//       adventure = moodAdventures.find(adv => {
+//         const titleMatch = (
+//           (adv.title && adv.title.toLowerCase() === title.toLowerCase()) ||
+//           (adv.adventureTitle && adv.adventureTitle.toLowerCase() === title.toLowerCase())
+//         );
+//         const cityMatch = adv.city && adv.city.toLowerCase() === city.toLowerCase();
+//         const stateMatch = adv.state && adv.state.toLowerCase() === state.toLowerCase();
+        
+//         if (titleMatch && cityMatch && stateMatch) {
+//           matchType = 'case-insensitive';
+//           return true;
+//         }
+//         return false;
+//       });
+//     }
+
+//     // Try matching with location field as well (since POST uses both city and location)
+//     if (!adventure) {
+//       adventure = moodAdventures.find(adv => {
+//         const titleMatch = (
+//           (adv.title && adv.title.toLowerCase() === title.toLowerCase()) ||
+//           (adv.adventureTitle && adv.adventureTitle.toLowerCase() === title.toLowerCase())
+//         );
+//         const locationMatch = (
+//           (adv.city && adv.city.toLowerCase() === city.toLowerCase()) ||
+//           (adv.location && adv.location.toLowerCase() === city.toLowerCase())
+//         );
+//         const stateMatch = adv.state && adv.state.toLowerCase() === state.toLowerCase();
+        
+//         if (titleMatch && locationMatch && stateMatch) {
+//           matchType = 'flexible-location';
+//           return true;
+//         }
+//         return false;
+//       });
+//     }
+
+//     if (!adventure) {
+//       // Provide helpful debugging information
+//       const suggestions = moodAdventures
+//         .filter(adv => 
+//           (adv.city && adv.city.toLowerCase().includes(city.toLowerCase())) ||
+//           (adv.location && adv.location.toLowerCase().includes(city.toLowerCase())) ||
+//           (adv.state && adv.state.toLowerCase() === state.toLowerCase())
+//         )
+//         .slice(0, 3)
+//         .map(adv => ({
+//           title: adv.title || adv.adventureTitle,
+//           city: adv.city,
+//           location: adv.location,
+//           state: adv.state
+//         }));
+
+//       return res.status(404).json({
+//         success: false,
+//         error: `Adventure not found for title '${title}', city '${city}', state '${state}' in mood '${moodId}'`,
+//         searchCriteria: { moodId, title, city, state },
+//         totalAdventuresInMood: moodAdventures.length,
+//         suggestions: suggestions.length > 0 ? suggestions : 'No similar adventures found'
+//       });
+//     }
+
+//     console.log(`✅ Found adventure using ${matchType} match`);
+
+//     res.json({
+//       success: true,
+//       message: 'Adventure found successfully',
+//       matchType: matchType,
+//       data: adventure
+//     });
+
+//   } catch (err) {
+//     console.error('❌ Error fetching locationAndDirection:', err);
+//     res.status(500).json({
+//       success: false,
+//       error: 'Failed to fetch locationAndDirection',
+//       message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+//     });
+//   }
+// });
 
 
+// app.post('/locationAndDirection', async (req, res) => {
+//   try {
+//     const { moodId, title, city, state, location, locationAndDirection } = req.body;
+    
+//     // Validate required fields
+//     if (!moodId || !title || !city || !state || !location || !locationAndDirection) {
+//       return res.status(400).json({
+//         success: false,
+//         error: 'moodId, title, city, state, location, and locationAndDirection are required'
+//       });
+//     }
 
+//     if (!Array.isArray(locationAndDirection)) {
+//       return res.status(400).json({
+//         success: false,
+//         error: 'locationAndDirection must be an array'
+//       });
+//     }
+
+//     // Find the document or create one if it doesn't exist
+//     let doc = await Adventure.findOne();
+//     if (!doc) {
+//       console.log('📝 Creating new adventures document');
+//       doc = new Adventure({ adventures: {} });
+//     }
+
+//     // Initialize mood array if it doesn't exist
+//     if (!doc.adventures[moodId]) {
+//       console.log(`📝 Creating new mood: ${moodId}`);
+//       doc.adventures[moodId] = [];
+//     }
+
+//     const moodAdventures = doc.adventures[moodId];
+
+//     console.log(`🔍 Searching for adventure in mood '${moodId}':`);
+//     console.log(`  - Title: '${title}'`);
+//     console.log(`  - City: '${city}'`);
+//     console.log(`  - State: '${state}'`);
+//     console.log(`  - Total adventures in mood: ${moodAdventures.length}`);
+
+//     // Try to find existing adventure with flexible matching
+//     let adventureIndex = -1;
+//     let matchDetails = {};
+
+//     // Try exact match first
+//     adventureIndex = moodAdventures.findIndex(adv => {
+//       const titleMatch = (adv.title === title || adv.adventureTitle === title);
+//       const locationMatch = adv.location === city;
+//       const stateMatch = adv.state === state;
+      
+//       if (titleMatch && locationMatch && stateMatch) {
+//         matchDetails = { type: 'exact', titleField: adv.title ? 'title' : 'adventureTitle' };
+//         return true;
+//       }
+//       return false;
+//     });
+
+//     // If no exact match, try case-insensitive search
+//     if (adventureIndex === -1) {
+//       adventureIndex = moodAdventures.findIndex(adv => {
+//         const titleMatch = (
+//           (adv.title && adv.title.toLowerCase() === title.toLowerCase()) ||
+//           (adv.adventureTitle && adv.adventureTitle.toLowerCase() === title.toLowerCase())
+//         );
+//         const locationMatch = adv.location && adv.location.toLowerCase() === city.toLowerCase();
+//         const stateMatch = adv.state && adv.state.toLowerCase() === state.toLowerCase();
+        
+//         if (titleMatch && locationMatch && stateMatch) {
+//           matchDetails = { type: 'case-insensitive', titleField: adv.title ? 'title' : 'adventureTitle' };
+//           return true;
+//         }
+//         return false;
+//       });
+//     }
+
+//     let isNewAdventure = false;
+
+//     if (adventureIndex === -1) {
+//       // Adventure doesn't exist, create a new one
+//       console.log('📝 Adventure not found, creating new adventure');
+      
+//       const newAdventure = {
+//         title: title,
+//         location: location,
+//         city: city,
+//         state: state,
+//         locationAndDirection: locationAndDirection,
+//         createdAt: new Date().toISOString(),
+//         updatedAt: new Date().toISOString()
+//       };
+
+//       // Add the new adventure to the mood array
+//       moodAdventures.push(newAdventure);
+//       adventureIndex = moodAdventures.length - 1;
+//       isNewAdventure = true;
+      
+//       console.log(`✅ Created new adventure at index ${adventureIndex}`);
+//     } else {
+//       // Adventure exists, update it
+//       console.log(`✅ Found existing adventure at index ${adventureIndex} using ${matchDetails.type} match`);
+      
+//       // Update locationAndDirection and updatedAt
+//       moodAdventures[adventureIndex].locationAndDirection = locationAndDirection;
+//       moodAdventures[adventureIndex].updatedAt = new Date().toISOString();
+//       moodAdventures[adventureIndex].location = location;
+//     }
+
+//     // Mark the document as modified and save
+//     doc.markModified(`adventures.${moodId}`);
+//     await doc.save();
+
+//     console.log(`✅ Adventure ${isNewAdventure ? 'created' : 'updated'} successfully`);
+
+//     res.json({
+//       success: true,
+//       message: `Adventure ${isNewAdventure ? 'created' : 'updated'} successfully`,
+//       isNewAdventure: isNewAdventure,
+//       matchType: isNewAdventure ? 'new' : matchDetails.type,
+//       data: moodAdventures[adventureIndex]
+//     });
+
+//   } catch (err) {
+//     console.error('❌ Error saving/updating adventure:', err);
+//     res.status(500).json({
+//       success: false,
+//       error: 'Failed to save/update adventure',
+//       message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+//     });
+//   }
+// });
+
+// Import your model (assuming it's named LocationAndDirection)
+
+// POST endpoint - Save or update location and direction data
 app.post('/locationAndDirection', async (req, res) => {
   try {
-    const { moodId, title, city, state, location, locationAndDirection } = req.body;
+    const { moodId, title, city, state, location, locationAndDirection, searchQuery } = req.body;
     
     // Validate required fields
-    if (!moodId || !title || !city || !state || !location || !locationAndDirection) {
+    if (!moodId || !title || !state || !location || !locationAndDirection) {
       return res.status(400).json({
         success: false,
-        error: 'moodId, title, city, state, location, and locationAndDirection are required'
+        error: 'moodId, title, state, location, and locationAndDirection are required'
       });
     }
 
@@ -695,113 +939,208 @@ app.post('/locationAndDirection', async (req, res) => {
       });
     }
 
-    // Find the document or create one if it doesn't exist
-    let doc = await Adventure.findOne();
-    if (!doc) {
-      console.log('📝 Creating new adventures document');
-      doc = new Adventure({ adventures: {} });
-    }
-
-    // Initialize mood array if it doesn't exist
-    if (!doc.adventures[moodId]) {
-      console.log(`📝 Creating new mood: ${moodId}`);
-      doc.adventures[moodId] = [];
-    }
-
-    const moodAdventures = doc.adventures[moodId];
-
-    console.log(`🔍 Searching for adventure in mood '${moodId}':`);
-    console.log(`  - Title: '${title}'`);
-    console.log(`  - City: '${city}'`);
-    console.log(`  - State: '${state}'`);
-    console.log(`  - Total adventures in mood: ${moodAdventures.length}`);
-
-    // Try to find existing adventure with flexible matching
-    let adventureIndex = -1;
-    let matchDetails = {};
-
-    // Try exact match first
-    adventureIndex = moodAdventures.findIndex(adv => {
-      const titleMatch = (adv.title === title || adv.adventureTitle === title);
-      const locationMatch = adv.location === city;
-      const stateMatch = adv.state === state;
-      
-      if (titleMatch && locationMatch && stateMatch) {
-        matchDetails = { type: 'exact', titleField: adv.title ? 'title' : 'adventureTitle' };
-        return true;
-      }
-      return false;
-    });
-
-    // If no exact match, try case-insensitive search
-    if (adventureIndex === -1) {
-      adventureIndex = moodAdventures.findIndex(adv => {
-        const titleMatch = (
-          (adv.title && adv.title.toLowerCase() === title.toLowerCase()) ||
-          (adv.adventureTitle && adv.adventureTitle.toLowerCase() === title.toLowerCase())
-        );
-        const locationMatch = adv.location && adv.location.toLowerCase() === city.toLowerCase();
-        const stateMatch = adv.state && adv.state.toLowerCase() === state.toLowerCase();
-        
-        if (titleMatch && locationMatch && stateMatch) {
-          matchDetails = { type: 'case-insensitive', titleField: adv.title ? 'title' : 'adventureTitle' };
-          return true;
-        }
-        return false;
+    if (locationAndDirection.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'At least one location must be provided'
       });
     }
 
-    let isNewAdventure = false;
+    console.log(`🔍 Searching for existing document:`);
+    console.log(`  - MoodId: '${moodId}'`);
+    console.log(`  - Title: '${title}'`);
+    console.log(`  - Location: '${location}'`);
+    console.log(`  - State: '${state}'`);
 
-    if (adventureIndex === -1) {
-      // Adventure doesn't exist, create a new one
-      console.log('📝 Adventure not found, creating new adventure');
-      
-      const newAdventure = {
-        title: title,
-        location: location,
-        city: city,
-        state: state,
-        locationAndDirection: locationAndDirection,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
+    // Try to find existing document with flexible matching
+    let existingDoc = null;
 
-      // Add the new adventure to the mood array
-      moodAdventures.push(newAdventure);
-      adventureIndex = moodAdventures.length - 1;
-      isNewAdventure = true;
-      
-      console.log(`✅ Created new adventure at index ${adventureIndex}`);
-    } else {
-      // Adventure exists, update it
-      console.log(`✅ Found existing adventure at index ${adventureIndex} using ${matchDetails.type} match`);
-      
-      // Update locationAndDirection and updatedAt
-      moodAdventures[adventureIndex].locationAndDirection = locationAndDirection;
-      moodAdventures[adventureIndex].updatedAt = new Date().toISOString();
-      moodAdventures[adventureIndex].location = location;
+    // Try exact match first
+    existingDoc = await LocationAndDirection.findOne({
+      moodId: moodId,
+      title: title,
+      location: location,
+      state: state
+    });
+
+    // Try case-insensitive match if no exact match
+    if (!existingDoc) {
+      existingDoc = await LocationAndDirection.findOne({
+        moodId: new RegExp(`^${moodId}$`, 'i'),
+        title: new RegExp(`^${title}$`, 'i'),
+        location: new RegExp(`^${location}$`, 'i'),
+        state: new RegExp(`^${state}$`, 'i')
+      });
     }
 
-    // Mark the document as modified and save
-    doc.markModified(`adventures.${moodId}`);
-    await doc.save();
+    let isNewDocument = false;
+    let result;
 
-    console.log(`✅ Adventure ${isNewAdventure ? 'created' : 'updated'} successfully`);
+    if (!existingDoc) {
+      // Create new document
+      console.log('📝 Creating new location document');
+      
+      const newDoc = new LocationAndDirection({
+        moodId,
+        title,
+        state,
+        location,
+        locationAndDirection,
+        searchQuery: searchQuery || '',
+        metadata: {
+          apiCallsMade: 1,
+          lastApiCall: new Date(),
+          usageCount: 1
+        }
+      });
+
+      result = await newDoc.save();
+      isNewDocument = true;
+      
+      console.log(`✅ Created new document with ID: ${result._id}`);
+    } else {
+      // Update existing document
+      console.log(`✅ Found existing document with ID: ${existingDoc._id}`);
+      
+      existingDoc.locationAndDirection = locationAndDirection;
+      existingDoc.location = location; // Update location if it changed
+      if (searchQuery) existingDoc.searchQuery = searchQuery;
+      
+      // Update metadata
+      existingDoc.metadata.apiCallsMade += 1;
+      existingDoc.metadata.lastApiCall = new Date();
+      existingDoc.metadata.usageCount += 1;
+
+      result = await existingDoc.save();
+    }
+
+    console.log(`✅ Document ${isNewDocument ? 'created' : 'updated'} successfully`);
 
     res.json({
       success: true,
-      message: `Adventure ${isNewAdventure ? 'created' : 'updated'} successfully`,
-      isNewAdventure: isNewAdventure,
-      matchType: isNewAdventure ? 'new' : matchDetails.type,
-      data: moodAdventures[adventureIndex]
+      message: `Location and direction ${isNewDocument ? 'created' : 'updated'} successfully`,
+      isNewDocument,
+      data: result
     });
 
   } catch (err) {
-    console.error('❌ Error saving/updating adventure:', err);
+    console.error('❌ Error saving/updating location and direction:', err);
+    
+    // Handle validation errors
+    if (err.name === 'ValidationError') {
+      const validationErrors = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+
     res.status(500).json({
       success: false,
-      error: 'Failed to save/update adventure',
+      error: 'Failed to save/update location and direction',
+      message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+    });
+  }
+});
+
+// GET endpoint - Retrieve location and direction data
+app.get('/locationAndDirection', async (req, res) => {
+  try {
+    const { moodId, title, location, state, limit, page } = req.query;
+
+    // If no query parameters provided, return all documents
+    if (!moodId && !title && !location && !state) {
+      console.log('📋 Returning all location documents');
+      
+      const pageNum = parseInt(page) || 1;
+      const limitNum = parseInt(limit) || 50;
+      const skip = (pageNum - 1) * limitNum;
+
+      const [documents, totalCount] = await Promise.all([
+        LocationAndDirection.find({})
+          .sort({ updatedAt: -1 })
+          .skip(skip)
+          .limit(limitNum)
+          .lean(),
+        LocationAndDirection.countDocuments({})
+      ]);
+
+      // Group by mood for summary
+      const moodSummary = {};
+      documents.forEach(doc => {
+        moodSummary[doc.moodId] = (moodSummary[doc.moodId] || 0) + 1;
+      });
+
+      return res.json({
+        success: true,
+        message: 'All location documents retrieved successfully',
+        totalCount,
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalCount / limitNum),
+        moodSummary,
+        data: documents
+      });
+    }
+
+    // Build search criteria
+    const searchCriteria = {};
+    if (moodId) searchCriteria.moodId = new RegExp(`^${moodId}$`, 'i');
+    if (title) searchCriteria.title = new RegExp(`^${title}$`, 'i');
+    if (location) searchCriteria.location = new RegExp(`^${location}$`, 'i');
+    if (state) searchCriteria.state = new RegExp(`^${state}$`, 'i');
+
+    console.log(`🔍 Searching with criteria:`, searchCriteria);
+
+    const documents = await LocationAndDirection.find(searchCriteria)
+      .sort({ updatedAt: -1 })
+      .lean();
+
+    if (documents.length === 0) {
+      // Provide suggestions for similar documents
+      const suggestions = await LocationAndDirection.find({
+        $or: [
+          location ? { location: new RegExp(location, 'i') } : {},
+          state ? { state: new RegExp(`^${state}$`, 'i') } : {},
+          moodId ? { moodId: new RegExp(`^${moodId}$`, 'i') } : {}
+        ].filter(obj => Object.keys(obj).length > 0)
+      })
+      .select('moodId title location state')
+      .limit(3)
+      .lean();
+
+      return res.status(404).json({
+        success: false,
+        error: 'No documents found matching the criteria',
+        searchCriteria: { moodId, title, location, state },
+        suggestions: suggestions.length > 0 ? suggestions : 'No similar documents found'
+      });
+    }
+
+    console.log(`✅ Found ${documents.length} document(s)`);
+
+    // If searching for specific document (all params provided), return single result
+    if (moodId && title && location && state && documents.length === 1) {
+      return res.json({
+        success: true,
+        message: 'Document found successfully',
+        data: documents[0]
+      });
+    }
+
+    // Return multiple results
+    res.json({
+      success: true,
+      message: `Found ${documents.length} document(s)`,
+      count: documents.length,
+      data: documents
+    });
+
+  } catch (err) {
+    console.error('❌ Error fetching location and direction:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch location and direction',
       message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
     });
   }
