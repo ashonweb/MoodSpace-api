@@ -477,6 +477,7 @@ app.post('/adventures', async (req, res) => {
       updatedAt: updatedAt || new Date().toISOString()
     });
 
+    doc.markModified('adventures');
     await doc.save();
 
     res.status(201).json({
