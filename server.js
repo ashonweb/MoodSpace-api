@@ -723,8 +723,8 @@ app.put('/locationAndDirection', async (req, res) => {
     // Find the adventure by title, city (location), and state
     const adventureIndex = moodAdventures.findIndex(
       adv =>
-        (adv.title === title || adv.adventureTitle === title) &&
-        (adv.city === location || adv.location === location) &&
+        (adv.title === title) &&
+        
         adv.state === state
     );
 
