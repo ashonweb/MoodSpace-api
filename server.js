@@ -456,6 +456,20 @@ app.post('/adventures', async (req, res) => {
       });
     }
 
+    // Find the single adventures document or create if it doesn't exist
+    let doc = await Adventure.findOne();
+    if (!doc) {
+      doc = new Adventure({ adventures: {} });
+    }
+
+    // Get current adventures object
+    const currentAdventures = doc.adventures || {};
+    
+    // Add new adventure under the correct mood
+    if (!currentAdventures[moodId]) {
+      currentAdventures[moodId] = [];
+    }
+
     const newAdventure = {
       adventureTitle,
       locationAndDirection,
@@ -464,21 +478,15 @@ app.post('/adventures', async (req, res) => {
       updatedAt: updatedAt || new Date().toISOString()
     };
 
-    // Use findOneAndUpdate with $push to add the adventure
-    const doc = await Adventure.findOneAndUpdate(
-      {}, // Find any document (since you have only one)
-      { 
-        $push: { [`adventures.${moodId}`]: newAdventure }
-      },
-      { 
-        new: true, 
-        upsert: true, // Create document if it doesn't exist
-        setDefaultsOnInsert: true 
-      }
-    );
+    currentAdventures[moodId].push(newAdventure);
+
+    // Use set() to ensure Mongoose detects the change
+    doc.set('adventures', currentAdventures);
+    
+    await doc.save();
 
     console.log('✅ Adventure saved:', newAdventure);
-    console.log('📊 Updated document:', JSON.stringify(doc.adventures, null, 2));
+    console.log('📊 Current adventures structure:', JSON.stringify(currentAdventures, null, 2));
 
     res.status(201).json({
       success: true,
@@ -494,7 +502,6 @@ app.post('/adventures', async (req, res) => {
     });
   }
 });
-
 
 // 404 handler
 app.use('*', (req, res) => {
